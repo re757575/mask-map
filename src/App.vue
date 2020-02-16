@@ -143,27 +143,6 @@ L.Marker.prototype.options.icon = DefaultIcon;
 // 台灣縣市
 import cityList from "./assets/tw-city.json";
 
-var greenIcon = new L.Icon({
-  iconUrl:
-    "https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-var redIcon = new L.Icon({
-  iconUrl:
-    "https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
 export default {
   name: "App",
   data() {
@@ -241,7 +220,8 @@ export default {
         const { coordinates } = geometry;
         const [lng, lat] = coordinates;
 
-        const icon = mask_adult === 0 ? redIcon : greenIcon;
+        const icon =
+          mask_adult === 0 ? this.createIcon("red") : this.createIcon();
 
         const marker = L.marker([lat, lng], { icon, title: name })
           // .addTo(this.map)
@@ -306,7 +286,6 @@ export default {
       }, 0);
       // console.log(this.map.getCenter());
     },
-
     updateData(isInit) {
       const url =
         "https://raw.githubusercontent.com/kiang/pharmacies/master/json/points.json";
@@ -332,6 +311,17 @@ export default {
         this.isLoading = false;
       });
     },
+    createIcon(color = "green") {
+      return new L.Icon({
+        iconUrl: `https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
+        shadowUrl:
+          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+    },
     getRandomLatLng() {
       let bounds = this.map.getBounds(),
         southWest = bounds.getSouthWest(),
@@ -343,19 +333,57 @@ export default {
         southWest.lat + latSpan * Math.random(),
         southWest.lng + lngSpan * Math.random()
       );
+    },
+    getLocation() {
+      if (window.navigator.geolocation) {
+        window.navigator.geolocation.getCurrentPosition(
+          this.handleShowLocation,
+          this.handleShowLocationError
+        );
+      } else {
+        alert("Geolocation is not supported by this browser.");
+      }
+    },
+    handleShowLocation(position) {
+      const { latitude, longitude } = position.coords;
+      const icon = this.createIcon("yellow");
+
+      L.marker([latitude, longitude], {
+        icon,
+        title: "me"
+      })
+        .addTo(this.map)
+        .bindPopup("<h3>你在這</h3>")
+        .openPopup()
+        .on("click", function(e) {
+          console.log(e.latlng);
+        });
+    },
+    handleShowLocationError(error) {
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          alert("User denied the request for Geolocation.");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          alert("Location information is unavailable.");
+          break;
+        case error.TIMEOUT:
+          alert("The request to get user location timed out.");
+          break;
+        case error.UNKNOWN_ERROR:
+          alert("An unknown error occurred.");
+          break;
+      }
     }
   },
-  created() {},
+  created() {
+    this.getLocation();
+  },
   mounted() {
-    // this.selectedCity = "臺中市";
-    // this.selectedArea = "龍井區";
-
     this.map = L.map("map", {
       center: this.postion,
       zoom: 8
     });
-
-    // window.mymap = this.map;
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution:
